@@ -1,0 +1,14 @@
+<?xml version="1.0"?>
+<!-- This file is part of Tryton.  The COPYRIGHT file at the top level of
+this repository contains the full copyright notices and license terms. -->
+<data>
+    <xpath expr="/tree/field[@name='timesheet_duration']" position="replace"/>
+    <xpath expr="/tree/field[@name='total_effort']" position="replace"/>
+    <xpath expr="/tree/field[@name='cost']" position="replace"/>
+    <xpath expr="/tree/field[@name='revenue']" position="replace"/>
+
+    <xpath expr="/tree/field[@name='total_progress']" position="replace">
+       <!--  <field name="progress_amount"/>
+        <field name="percent_progress_amount" widget="progressbar" expand="1"/> -->
+    </xpath>
+</data>
