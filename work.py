@@ -306,7 +306,7 @@ class Work:
     def _get_revenue(cls, works):
         result = super(Work, cls)._get_revenue(works)
         for work in works:
-            if work.invoice_product_type == 'service':
+            if work.invoice_product_type != 'service':
                 result[work.id] = (Decimal(str(work.quantity))
                     * (work.list_price or Decimal(0)))
         return result
@@ -315,7 +315,7 @@ class Work:
     def _get_cost(cls, works):
         result = super(Work, cls)._get_cost(works)
         for work in works:
-            if work.invoice_product_type == 'service':
+            if work.invoice_product_type != 'service':
                 if work.product_goods:
                     result[work.id] = (Decimal(str(work.quantity)) *
                             work.product_goods.cost_price)
