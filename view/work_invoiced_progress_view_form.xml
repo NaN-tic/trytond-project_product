@@ -5,5 +5,7 @@
     <xpath expr="/form/field[@name='effort_duration']" position="after">
         <label name="quantity"/>
         <field name="quantity"/>
+        <label name="uom"/>
+        <field name="uom"/>
     </xpath>
 </data>

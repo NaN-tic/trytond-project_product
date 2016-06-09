@@ -4,5 +4,6 @@
 <data>
     <xpath expr="/tree/field[@name='effort_duration']" position="after">
         <field name="quantity"/>
+        <field name="uom"/>
     </xpath>
 </data>

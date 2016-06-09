@@ -21,7 +21,25 @@ DEPENDS = ['invoice_product_type', 'type']
 class WorkInvoicedProgress:
     __name__ = 'project.work.invoiced_progress'
     __metaclass__ = PoolMeta
-    quantity = fields.Float('Quantity')
+    uom = fields.Function(fields.Many2One('product.uom', 'UoM'),
+        'get_uom')
+    uom_digits = fields.Function(fields.Integer('UoM Digits'),
+        'get_uom_digits')
+    quantity = fields.Float('Quantity', digits=(16, Eval('uom_digits', 2)),
+        depends=['uom_digits'])
+
+    def get_uom(self, name):
+        return self.work.uom.id if self.work.uom else None
+
+    @staticmethod
+    def default_uom_digits():
+        return 2
+
+    @fields.depends('uom')
+    def get_uom_digits(self, name):
+        if self.work.uom:
+            return self.work.uom.digits
+        return 2
 
 
 class Work:
@@ -288,93 +306,95 @@ class Work:
     def _get_revenue(cls, works):
         result = super(Work, cls)._get_revenue(works)
         for work in works:
-            if work.product_goods:
-                result[work.id] = (Decimal(str(work.quantity)) *
-                        work.product_goods.list_price)
+            if work.invoice_product_type == 'service':
+                result[work.id] = (Decimal(str(work.quantity))
+                    * (work.list_price or Decimal(0)))
         return result
 
     @classmethod
     def _get_cost(cls, works):
         result = super(Work, cls)._get_cost(works)
         for work in works:
-            if work.product_goods:
-                result[work.id] = (Decimal(str(work.quantity)) *
-                        work.product_goods.cost_price)
+            if work.invoice_product_type == 'service':
+                if work.product_goods:
+                    result[work.id] = (Decimal(str(work.quantity)) *
+                            work.product_goods.cost_price)
+                else:
+                    result[work.id] = Decimal(0)
         return result
 
-    # TODO: diria que no fa falta.
-    def _get_lines_to_invoice_timesheet(self):
-        parent = self
-        while getattr(parent, 'parent', None) and parent.type != 'project':
-            parent = self.parent
-        if parent.invoice_product_type == 'service':
-            return super(Work, self)._get_lines_to_invoice_timesheet()
-        return []
-
     def _get_lines_to_invoice_effort(self):
+        pool = Pool()
+        Uom = pool.get('product.uom')
+
         if self.invoice_product_type == 'service':
             return super(Work, self)._get_lines_to_invoice_effort()
 
-        res = []
-        if (not self.invoice_line and self.list_price
-                and self.state == 'done'):
-            pool = Pool()
-            Uom = pool.get('product.uom')
-            quantity = Uom.compute_qty(self.uom, self.quantity or
-                Decimal(0), self.product_goods.default_uom)
-            res.append({
+        if self.invoice_line or not self.quantity or self.state != 'done':
+            return []
+
+        if not self.product_goods:
+            self.raise_user_error('missing_product', (self.rec_name,))
+        elif self.list_price is None:
+            self.raise_user_error('missing_list_price', (self.rec_name,))
+
+        quantity = Uom.compute_qty(
+            self.uom, self.quantity, self.product_goods.default_uom)
+        return [{
                 'product': self.product_goods,
                 'quantity': quantity,
-                'unit': self.product_goods.default_uom,
+                'unit': self.uom,
                 'unit_price': self.list_price,
-                'description': self.product_goods.name,
+                'description': self.name,
                 'origin': self,
-                })
-        return res
+                }]
 
     def _get_lines_to_invoice_progress(self):
         pool = Pool()
-        Uom = pool.get('product.uom')
         InvoicedProgress = pool.get('project.work.invoiced_progress')
 
-        if not self.product_goods:
+        if self.invoice_product_type == 'service':
             return super(Work, self)._get_lines_to_invoice_progress()
 
-        res = []
-        if self.progress is None:
-            return res
+        if self.progress is None or self.state != 'done':
+            return []
 
         invoiced_quantity = sum(x.quantity for x in self.invoiced_progress)
-        progress_quantity = Uom.compute_qty(self.uom,
-            self.progress_quantity or Decimal(0),
-                self.product_goods.default_uom)
 
-        if progress_quantity == invoiced_quantity:
-            return res
+        quantity = self.progress_quantity - invoiced_quantity
+        if quantity > 0:
+            if not self.product_goods:
+                self.raise_user_error('missing_product', (self.rec_name,))
+            elif self.list_price is None:
+                self.raise_user_error('missing_list_price', (self.rec_name,))
+            invoiced_progress = InvoicedProgress(work=self,
+                quantity=quantity)
+            return [{
+                    'product': self.product_goods,
+                    'quantity': quantity,
+                    'unit': self.uom,
+                    'unit_price': self.list_price,
+                    'origin': invoiced_progress,
+                    'description': self.name,
+                    }]
 
-        quantity = progress_quantity - invoiced_quantity
-        invoiced_progress = InvoicedProgress(work=self,
-            quantity=quantity)
-        res.append({
-                'product': self.product_goods,
-                'quantity': quantity,
-                'unit': self.product_goods.default_uom,
-                'unit_price': self.list_price,
-                'origin': invoiced_progress,
-                'description': self.name,
-                })
-
-        return res
+    def _get_lines_to_invoice_timesheet(self):
+        if self.invoice_product_type == 'service':
+            return super(Work, self)._get_lines_to_invoice_timesheet()
+        return self._get_lines_to_invoice_progress()
 
     def _group_lines_to_invoice_key(self, line):
+        pool = Pool()
+        ModelData = pool.get('ir.model.data')
+        Uom = pool.get('product.uom')
+
         res = super(Work, self)._group_lines_to_invoice_key(line)
-        if 'unit' in line:
-            res += (('unit', line['unit']),)
-        return res
+        # use hour as unit for service works
+        hour = Uom(ModelData.get_id('product', 'uom_hour'))
+        return res + (('unit', line.get('unit', hour)),)
 
     def _get_invoice_line(self, key, invoice, lines):
         "Return a invoice line for the lines"
-
         pool = Pool()
         InvoiceLine = pool.get('account.invoice.line')
         ModelData = pool.get('ir.model.data')
@@ -382,21 +402,23 @@ class Work:
 
         hour = Uom(ModelData.get_id('product', 'uom_hour'))
 
-        product = key['product']
-        if product.default_uom == hour:
+        unit = key['unit']
+        if unit == hour:
             return super(Work, self)._get_invoice_line(key, invoice, lines)
 
         quantity = sum(l['quantity'] for l in lines)
+        product = key['product']
+
         invoice_line = InvoiceLine()
         invoice_line.type = 'line'
-        invoice_line.quantity = Uom.compute_qty(key['unit'], quantity,
+        invoice_line.quantity = Uom.compute_qty(unit, quantity,
             product.default_uom)
         invoice_line.unit = product.default_uom
         invoice_line.product = product
         invoice_line.description = key['description']
         invoice_line.account = product.account_revenue_used
-        invoice_line.unit_price = Uom.compute_price(key['unit'],
-            key['unit_price'], product.default_uom)
+        invoice_line.unit_price = Uom.compute_price(
+            unit, key['unit_price'], product.default_uom)
 
         taxes = []
         pattern = invoice_line._get_tax_rule_pattern()
