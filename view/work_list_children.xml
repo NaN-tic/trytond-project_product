@@ -7,8 +7,4 @@
     <xpath expr="/tree/field[@name='product']" position="after">
         <field name="product_goods"/>
     </xpath>
-    <xpath expr="/tree/field[@name='total_progress']" position="replace">
-        <!--<field name="progress_amount"/>-->
-        <field name="percent_progress_amount" widget="progressbar" expand="1"/>
-    </xpath>
 </data>

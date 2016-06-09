@@ -17,6 +17,12 @@ def suite():
     suite = trytond.tests.test_tryton.suite()
     suite.addTests(unittest.TestLoader().loadTestsFromTestCase(
         ProjectProductTestCase))
+    # Ensure we don't crash project_invoice
+    from trytond.modules.project_invoice.tests import test_project_invoice
+    for test in test_project_invoice.suite():
+        if test not in suite and isinstance(test, doctest.DocTestCase):
+            suite.addTest(test)
+
     suite.addTests(doctest.DocFileSuite(
             'scenario_project_product_effort.rst',
             setUp=doctest_setup, tearDown=doctest_teardown, encoding='utf-8',

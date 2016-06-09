@@ -1,25 +1,26 @@
 # The COPYRIGHT file at the top level of this repository contains the full
 # copyright notices and license terms.
 import datetime
-
 from decimal import Decimal
+
 from trytond.model import fields
 from trytond.pool import PoolMeta, Pool
-from trytond.pyson import Bool, Eval, If
+from trytond.pyson import Eval
+
 from trytond.modules.product import price_digits
 
 __all__ = ['Work', 'WorkInvoicedProgress']
 
 STATES = {
-    'required': Bool(Eval('invoice_product_type') == 'goods'),
-    'invisible': ~Bool(Eval('invoice_product_type') == 'goods'),
+    'required': Eval('invoice_product_type') == 'goods',
+    'invisible': Eval('invoice_product_type') != 'goods',
     }
+DEPENDS = ['invoice_product_type', 'type']
 
 
 class WorkInvoicedProgress:
     __name__ = 'project.work.invoiced_progress'
     __metaclass__ = PoolMeta
-
     quantity = fields.Float('Quantity')
 
 
@@ -27,92 +28,78 @@ class Work:
     __name__ = 'project.work'
     __metaclass__ = PoolMeta
 
+    invoice_product_type = fields.Selection([
+            ('service', 'Service'),
+            ('goods', 'Goods'),
+            ], 'Invoice Product Type', required=True, select=True)
+    # TODO: we can use project_revenue's product field and change the domain
     product_goods = fields.Many2One('product.product', 'Product for Goods',
-        states=STATES, depends=['product'])
-    uom = fields.Many2One('product.uom', 'UoM', states=STATES, domain=[
-            If(Bool(Eval('product_uom_category')),
-                ('category', '=', Eval('product_uom_category')),
-                ('category', '!=', -1)),
-            ], depends=['product_uom_category'])
-    product_uom_category = fields.Function(
+        states=STATES, depends=DEPENDS)
+    product_goods_uom_category = fields.Function(
         fields.Many2One('product.uom.category', 'Product Uom Category'),
-        'on_change_with_product_uom_category')
+        'on_change_with_product_goods_uom_category')
+    uom = fields.Many2One('product.uom', 'UoM', domain=[
+            ('category', '=', Eval('product_goods_uom_category', -1)),
+            ],
+        states=STATES, depends=DEPENDS + ['product_goods_uom_category'])
     uom_digits = fields.Function(fields.Integer('UoM Digits'),
         'on_change_with_uom_digits')
     quantity = fields.Float('Quantity', digits=(16, Eval('uom_digits', 2)),
-        states=STATES, depends=['uom_digits'])
-    unit_price = fields.Numeric('Unit Price', digits=price_digits,
-        states=STATES)
-    progress_quantity = fields.Float('Progress Quantity', digits=(16,
-                Eval('uom_digits', 2)),
-        states={
-            'invisible': Bool(Eval('invoice_product_type') == 'service'),
-            },
-        depends=['uom_digits'])
-    progress_amount = fields.Function(fields.Float('Progress Amount'),
+        states=STATES, depends=DEPENDS + ['uom_digits'])
+    progress_quantity = fields.Float('Progress Quantity',
+        digits=(16, Eval('uom_digits', 2)), domain=[
+            ['OR',
+                ('progress_quantity', '=', None),
+                [
+                    ('progress_quantity', '>=', 0.0),
+                    ('progress_quantity', '<=', Eval('quantity', 0.0)),
+                    ],
+                ]
+            ],
+        states=STATES, depends=DEPENDS + ['uom_digits', 'quantity'])
+    progress_amount = fields.Function(fields.Numeric('Progress Amount',
+            digits=price_digits),
         'get_total')
-    percent_progress_amount = fields.Function(fields.Float(
-        'Percent Progress Amount'), 'get_total')
-
-    total_progress_quantity = fields.Function(fields.Float(
-            'Total Progress Quantity',
-            digits=(16, Eval('uom_digits', 2)),
-            depends=['uom_digits']),
-        '_get_total_progress_quantity')
-
-    invoice_product_type = fields.Selection([('service', 'Service'),
-        ('goods', 'Goods')],
-        'Invoice Product Type', required=True)
+    percent_progress_amount = fields.Function(
+        fields.Numeric('Percent Progress Amount', digits=price_digits),
+        'get_total')
 
     @classmethod
     def __setup__(cls):
         super(Work, cls).__setup__()
-        cls.product.states['invisible'] = Bool(
-            Eval('invoice_product_type') == 'goods')
-        if 'product_goods' not in cls.product.depends:
-            cls.product.depends.append('product_goods')
-        cls.work.states['invisible'] = Bool(
-            Eval('invoice_product_type') == 'goods')
-        if 'product_goods' not in cls.work.depends:
-            cls.work.depends.append('product_goods')
-        cls.timesheet_available.states['invisible'] = Bool(
-            Eval('invoice_product_type') == 'goods')
-        if 'product_goods' not in cls.timesheet_available.depends:
-            cls.timesheet_available.depends.append('product_goods')
+        for fname in ('product', 'work', 'timesheet_available',
+                'timesheet_duration', 'effort_duration', 'total_effort',
+                'progress'):
+            field_states = getattr(cls, fname).states
+            if field_states.get('invisible'):
+                field_states['invisible'] = (field_states['invisible']
+                    | (Eval('invoice_product_type') == 'goods'))
+            else:
+                field_states['invisible'] = (
+                    Eval('invoice_product_type') == 'goods')
 
-        cls.effort_duration.states['invisible'] = Bool(
-            Eval('invoice_product_type') == 'goods')
-        if 'product_goods' not in cls.effort_duration.depends:
-            cls.effort_duration.depends.append('product_goods')
+            field_depends = getattr(cls, fname).depends
+            if 'invoice_product_type' not in field_depends:
+                field_depends.append('invoice_product_type')
         if 'invoice' in cls._buttons:
             cls._buttons['invoice']['readonly'] = False
 
+    @classmethod
+    def view_attributes(cls):
+        return [
+            ('/form/notebook/page[@id="general"]/separator[@id="goods"]',
+                'states', {
+                    'invisible': Eval('invoice_product_type') != 'goods',
+                    }),
+            ('/form/notebook/page[@id="general"]/separator[@id="service"]',
+                'states', {
+                    'invisible': Eval('invoice_product_type') != 'service',
+                    }),
+            ]
+
     @staticmethod
-    def default_uom_digits():
-        return 2
-
-    @fields.depends('quantity', 'effort_duration', 'uom',
-        'invoice_product_type')
-    def on_change_with_quantity(self, name=None):
-        quantity = self.quantity or 0.0
-        if self.invoice_product_type == 'service':
-            uom = self.uom
-            effort_duration = self.effort_duration
-            if uom and uom.category.name == 'Time' and effort_duration:
-                total_seconds = effort_duration.total_seconds()
-                quantity = total_seconds * uom.rate
-        return quantity
-
-    @fields.depends('uom')
-    def on_change_with_uom_digits(self, name=None):
-        if self.uom:
-            return self.uom.digits
-        return 2
-
-    @fields.depends('product_goods')
-    def on_change_with_product_uom_category(self, name=None):
-        if self.product_goods:
-            return self.product_goods.default_uom_category.id
+    def default_invoice_product_type():
+        return 'service'
 
     @fields.depends('product_goods')
     def on_change_product_goods(self):
@@ -120,72 +107,107 @@ class Work:
             self.name = self.product_goods.rec_name
             self.uom = self.product_goods.default_uom
             self.uom_digits = self.product_goods.default_uom.digits
-            self.unit_price = self.product_goods.list_price
+            self.list_price = self.product_goods.list_price
         else:
             self.uom = None
             self.uom_digits = None
 
-    @fields.depends('progress_quantity', 'quantity')
-    def on_change_with_progress(self):
-        if self.quantity:
-            return (self.progress_quantity or 0.0) / self.quantity
-        return 0.0
+    @fields.depends('product_goods')
+    def on_change_with_product_goods_uom_category(self, name=None):
+        if self.product_goods:
+            return self.product_goods.default_uom_category.id
 
-    @classmethod
-    def _get_total_progress_quantity(cls, works, name):
-        pool = Pool()
-        Uom = pool.get('product.uom')
-        result = {w.id: 0 for w in works}
-        result.update({w.id: Uom.compute_qty(
-                    w.uom, w.progress_quantity or 0,
-                    w.product_goods.default_uom)
-                for w in works if w.product_goods and w.uom})
-        return result
+    @staticmethod
+    def default_uom_digits():
+        return 2
+
+    @fields.depends('uom')
+    def on_change_with_uom_digits(self, name=None):
+        if self.uom:
+            return self.uom.digits
+        return 2
+
+    # TODO: remove, it isn't necessary
+    # @fields.depends('quantity', 'invoice_product_type', 'uom',
+    #     'effort_duration')
+    # def on_change_with_quantity(self, name=None):
+    #     pool = Pool()
+    #     ModelData = pool.get('ir.model.data')
+    #     quantity = self.quantity or 0.0
+    #     if self.invoice_product_type == 'service':
+    #         uom = self.uom
+    #         effort_duration = self.effort_duration
+    #         if (uom and uom.id == ModelData.get_id('product', 'uom_cat_time')
+    #                 and effort_duration):
+    #             total_seconds = effort_duration.total_seconds()
+    #             quantity = total_seconds * uom.rate
+    #     return quantity
+
+    @staticmethod
+    def default_progress_quantity():
+        return 0
+
+    # TODO: remove, it isn't necessary
+    # @fields.depends('progress_quantity', 'quantity')
+    # def on_change_with_progress(self):
+    #     if self.quantity:
+    #         return (self.progress_quantity or 0.0) / self.quantity
+    #     return 0.0
+
+    @property
+    def total_progress_quantity(self):
+        # TODO: it's necessary? it's extended in project_certification
+        # pool = Pool()
+        # Uom = pool.get('product.uom')
+        # if self.product_goods and self.uom:
+        #     return Uom.compute_qty(
+        #             self.uom, self.progress_quantity or 0,
+        #             self.product_goods.default_uom)
+        return self.progress_quantity
 
     @classmethod
     def get_total(cls, works, names):
+        new_names = names[:]
         if 'percent_progress_amount' in names:
             if 'progress_amount' not in names:
-                names.append('progress_amount')
+                new_names.append('progress_amount')
             if 'revenue' not in names:
-                names.append('revenue')
+                new_names.append('revenue')
+            new_names.remove('percent_progress_amount')
 
-        result = super(Work, cls).get_total(works, names)
+        result = super(Work, cls).get_total(works, new_names)
 
         if 'percent_progress_amount' in names:
             p_amount = result['progress_amount']
             revenue = result['revenue']
-            pp_amount = result['percent_progress_amount']
-            for w in works:
-                if revenue[w.id] == 0:
-                    pp_amount[w.id] = 0
+            digits = cls.percent_progress_amount.digits[1]
+            pp_amount = {}
+            for work in works:
+                if revenue[work.id] == Decimal(0):
+                    pp_amount[work.id] = Decimal(0)
                 else:
-                    pp_amount[w.id] = round(p_amount[w.id] /
-                        float(revenue[w.id]), 2)
+                    pp_amount[work.id] = (p_amount[work.id] / revenue[work.id]
+                        ).quantize(Decimal(str(10 ** - digits)))
+            result['percent_progress_amount'] = pp_amount
+        for key in result.keys():
+            if key not in names:
+                del result[key]
         return result
 
     @classmethod
     def _get_progress_amount(cls, works):
-        result = {w.id: 0 for w in works}
-        for w in works:
-            amount = float(w.list_price or 0) * w.timesheet_duration_hours
-            amount += (w.total_progress_quantity or 0) * \
-                float(w.unit_price or 0)
-            result[w.id] = amount
-        return result
-
-    @classmethod
-    def _get_percent_progress_amount(cls, works):
-        result = {w.id: 0 for w in works}
-        for w in works:
-            amount = float(w.list_price or 0) * \
-                (w.timesheet_duration_hours or 0)
-            amount += (w.total_progress_quantity or 0) * \
-                float(w.unit_price or 0)
-            if w.revenue == 0:
-                result[w.id] = 0
+        digits = cls.progress_amount.digits[1]
+        result = {}
+        for work in works:
+            if work.invoice_product_type == 'service':
+                amount = ((work.list_price or Decimal(0))
+                    * Decimal(str(work.timesheet_duration_hours)))
+            elif work.invoice_product_type == 'goods':
+                amount = ((work.list_price or Decimal(0))
+                    * Decimal(str(work.total_progress_quantity)))
             else:
-                result[w.id] = amount / float(w.revenue)
+                amount = Decimal(0)
+            result[work.id] = amount.quantize(Decimal(str(10 ** - digits)))
         return result
 
     @classmethod
@@ -211,7 +233,7 @@ class Work:
 
     @classmethod
     def _get_duration_to_invoice_progress(cls, works):
-        return cls._get_duration_to_invoice_timesheet(works, False)
+        return cls._get_duration_to_invoice_timesheet(works)
 
     @classmethod
     def _get_invoiced_amount_effort(cls, works):
@@ -294,8 +316,8 @@ class Work:
             return super(Work, self)._get_lines_to_invoice_effort()
 
         res = []
-        if (not self.invoice_line and self.unit_price and
-                self.state == 'done'):
+        if (not self.invoice_line and self.list_price
+                and self.state == 'done'):
             pool = Pool()
             Uom = pool.get('product.uom')
             quantity = Uom.compute_qty(self.uom, self.quantity or
@@ -304,7 +326,7 @@ class Work:
                 'product': self.product_goods,
                 'quantity': quantity,
                 'unit': self.product_goods.default_uom,
-                'unit_price': self.unit_price,
+                'unit_price': self.list_price,
                 'description': self.product_goods.name,
                 'origin': self,
                 })
@@ -337,7 +359,7 @@ class Work:
                 'product': self.product_goods,
                 'quantity': quantity,
                 'unit': self.product_goods.default_uom,
-                'unit_price': self.unit_price,
+                'unit_price': self.list_price,
                 'origin': invoiced_progress,
                 'description': self.name,
                 })

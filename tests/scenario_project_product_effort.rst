@@ -148,8 +148,8 @@ Create a Project::
     >>> task.type = 'task'
     >>> task.invoice_product_type = 'goods'
     >>> task.product_goods = product_good
-    >>> task.quantity = 5.0
-    >>> task.progress_quantity = 3.0
+    >>> task.quantity = 5
+    >>> task.progress_quantity = 3
     >>> project.children.append(task)
     >>> project.save()
     >>> project.reload()

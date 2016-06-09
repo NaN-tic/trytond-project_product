@@ -10,39 +10,52 @@
     <xpath expr="/form/notebook/page[@id='general']/field[@name='effort_duration']" position="replace"/>
     <xpath expr="/form/notebook/page[@id='general']/label[@name='progress']" position="replace"/>
     <xpath expr="/form/notebook/page[@id='general']/group[@id='progress']" position="replace"/>
-    <xpath expr="/form/notebook/page[@id='children']" position="replace"/>
+    <xpath expr="/form/notebook/page[@id='general']/label[@name='list_price']" position="replace"/>
+    <xpath expr="/form/notebook/page[@id='general']/field[@name='list_price']" position="replace"/>
 
     <xpath expr="/form/notebook/page/label[@name='project_invoice_method']" position="before">
         <label name="invoice_product_type"/>
         <field name="invoice_product_type"/>
+    </xpath>
+
+    <xpath expr="/form/notebook/page/field[@name='project_invoice_method']" position="after">
+        <separator id="goods" string="Goods" colspan="6"/>
+        <label name="product_goods"/>
+        <field name="product_goods"/>
+        <newline/>
+        <label name="quantity"/>
+        <field name="quantity"/>
+        <label name="progress_quantity"/>
+        <field name="progress_quantity"/>
+        <label name="uom"/>
+        <field name="uom"/>
+        <separator id="service" string="Service" colspan="6"/>
+        <label name="work"/>
+        <field name="work"/>
+        <label name="timesheet_available"/>
+        <field name="timesheet_available"/>
+        <newline/>
+        <label name="effort_duration"/>
+        <field name="effort_duration"/>
+        <label name="progress"/>
+        <group col="2" id="progress">
+            <field name="progress" factor="100" xexpand="0"/>
+            <label name="progress" string="%" xalign="0.0" xexpand="1"/>
+        </group>
+        <newline/>
+    </xpath>
+
+    <xpath expr="/form/notebook/page/label[@name='cost']" position="before">
+        <separator id="amounts" string="Amounts" colspan="6"/>
+        <label name="progress_amount"/>
+        <field name="progress_amount"/>
         <label name="percent_progress_amount"/>
         <group col="2" id="percent_progress_amount">
                 <field name="percent_progress_amount" factor="100" xexpand="0"/>
                 <label name="percent_progress_amount" string="%" xalign="0.0" xexpand="1"/>
         </group>
-    </xpath>
-
-    <xpath expr="/form/notebook/page/label[@name='cost']" position="before">
-        <separator id="costs" string="Amounts" colspan="6"/>
-        <label name="progress_amount"/>
-        <field name="progress_amount"/>
-    </xpath>
-
-    <xpath expr="/form/notebook/page/field[@name='project_invoice_method']" position="after">
-
-        <separator id="product_goods" string="Goods" colspan="6"/>
-        <label name="product_goods"/>
-        <field name="product_goods"/>
-        <label name="quantity"/>
-        <field name="quantity"/>
-        <label name="uom"/>
-        <field name="uom"/>
-        <label name="unit_price"/>
-        <field name="unit_price"/>
-        <label name="progress_quantity"/>
-        <field name="progress_quantity"/>
-        <label name="total_progress_quantity"/>
-        <field name="total_progress_quantity"/>
-        <separator id="time_product" string="Service" colspan="6"/>
+        <newline/>
+        <label name="list_price"/>
+        <field name="list_price"/>
     </xpath>
 </data>
