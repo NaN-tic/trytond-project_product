@@ -108,7 +108,7 @@ class Work:
         super(Work, cls).__setup__()
         for fname in ('product', 'work', 'timesheet_available',
                 'timesheet_duration', 'effort_duration', 'total_effort',
-                'progress'):
+                'progress', 'invoiced_duration', 'duration_to_invoice'):
             field_states = getattr(cls, fname).states
             if field_states.get('invisible'):
                 field_states['invisible'] = (field_states['invisible']
@@ -183,10 +183,6 @@ class Work:
     #             total_seconds = effort_duration.total_seconds()
     #             quantity = total_seconds * uom.rate
     #     return quantity
-
-    @staticmethod
-    def default_progress_quantity():
-        return 0
 
     # TODO: remove, it isn't necessary
     # @fields.depends('progress_quantity', 'quantity')
@@ -267,7 +263,7 @@ class Work:
         for work in works:
             if work.invoice_product_type == 'service':
                 amount = ((work.list_price or Decimal(0))
-                    * Decimal(str(work.timesheet_duration_hours)))
+                    * Decimal(str(work.effort_hours * (work.progress or 0))))
             elif work.invoice_product_type == 'goods':
                 amount = ((work.list_price or Decimal(0))
                     * Decimal(str(work.total_progress_quantity)))
@@ -445,7 +441,7 @@ class Work:
         if self.invoice_product_type == 'service':
             return super(Work, self)._get_lines_to_invoice_progress()
 
-        if self.progress is None or self.state != 'done':
+        if self.progress_quantity is None:
             return []
 
         invoiced_quantity = sum(x.quantity for x in self.invoiced_progress)

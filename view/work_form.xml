@@ -12,6 +12,8 @@
     <xpath expr="/form/notebook/page[@id='general']/group[@id='progress']" position="replace"/>
     <xpath expr="/form/notebook/page[@id='general']/label[@name='list_price']" position="replace"/>
     <xpath expr="/form/notebook/page[@id='general']/field[@name='list_price']" position="replace"/>
+    <xpath expr="/form/notebook/page[@id='general']/label[@name='invoiced_amount']" position="replace"/>
+    <xpath expr="/form/notebook/page[@id='general']/field[@name='invoiced_amount']" position="replace"/>
 
     <xpath expr="/form/notebook/page/label[@name='project_invoice_method']" position="before">
         <label name="invoice_product_type"/>
@@ -57,5 +59,10 @@
         <newline/>
         <label name="list_price"/>
         <field name="list_price"/>
+        <newline/>
+    </xpath>
+    <xpath expr="/form/notebook/page/field[@name='revenue']" position="after">
+        <label name="invoiced_amount"/>
+        <field name="invoiced_amount"/>
     </xpath>
 </data>
