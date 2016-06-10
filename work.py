@@ -100,7 +100,9 @@ class Work:
             if 'invoice_product_type' not in field_depends:
                 field_depends.append('invoice_product_type')
         if 'invoice' in cls._buttons:
-            cls._buttons['invoice']['readonly'] = False
+            cls._buttons['invoice']['readonly'] = (
+                cls._buttons['invoice']['readonly']
+                & (Eval('invoice_product_type', 'service') == 'service'))
 
     @classmethod
     def view_attributes(cls):
@@ -185,6 +187,31 @@ class Work:
 
     @classmethod
     def get_total(cls, works, names):
+        # Explanation what it does in project, project_invoice, project_revenue
+        # =====================================================================
+        # get_total multifield getter for:
+        # - project: timesheet_duration, total_effort, total_progress
+        # - project_invoice: invoiced_duration, duration_to_invoice,
+        #   invoiced_amount
+        # - project_revenue: revenue, cost
+        #
+        # get_total(works, field_name) calls _get_<field_name> (project)
+        # _get_invoiced_duration/duration_to_invoice/invoiced_amount calls
+        #     _get_invoice_values(works, <field_name>) (project_invoice)
+        # _get_invoice_values(works, field_name) calls
+        #     _get_<field_name>_<invoice_method> setting default values
+        #     previously (project_invoice)
+        #     List of called methos:
+        #     - _get_invoiced_duration_manual/effort/progrees/timesheet
+        #     - _get_duration_to_invoice_manual/effort/progrees/timesheet
+        #     - _get_invoiced_amount_manual/effort/progrees/timesheet
+        #     All these methods computes their values "directly" except:
+        #     - _get_<field_name>_manual do nothing (return empty {})
+        #     - _get_invoiced_duration_timesheet(works) calls
+        #         _get_duration_timesheet(works, True) (project_invoice)
+        #     - _get_duration_to_invoice_timesheet(works) calls
+        #         _get_duration_timesheet(works, False) (project_invoice)
+        #
         new_names = names[:]
         if 'percent_progress_amount' in names:
             if 'progress_amount' not in names:
@@ -229,98 +256,174 @@ class Work:
         return result
 
     @classmethod
-    def _get_invoiced_duration(cls, works):
-        res = dict.fromkeys((w.id for w in works), datetime.timedelta())
-        d_works = [x for x in works if x.invoice_product_type == 'service']
-        res.update(super(Work, cls)._get_invoiced_duration(d_works))
-        return res
+    def _get_timesheet_duration(cls, works):
+        service_works = []
+        result = {}
+        for work in works:
+            if work.invoice_product_type == 'service':
+                service_works.append(work)
+            else:
+                result[work.id] = datetime.timedelta()
+        if service_works:
+            result.update(
+                super(Work, cls)._get_timesheet_duration(service_works))
+        return result
 
     @classmethod
-    def _get_duration_to_invoice(cls, works):
-        res = dict.fromkeys((w.id for w in works), datetime.timedelta())
-        d_works = [x for x in works if x.invoice_product_type == 'service']
-        res.update(super(Work, cls)._get_duration_to_invoice(d_works))
-        return res
+    def _get_total_effort(cls, works):
+        service_works = []
+        result = {}
+        for work in works:
+            if work.invoice_product_type == 'service':
+                service_works.append(work)
+            else:
+                result[work.id] = datetime.timedelta()
+        if service_works:
+            result.update(
+                super(Work, cls)._get_total_effort(service_works))
+        return result
 
     @classmethod
-    def _get_invoiced_amount_timesheet(cls, works):
-        res = dict.fromkeys((w.id for w in works), Decimal(0))
-        d_works = [x for x in works if x.invoice_product_type == 'service']
-        res.update(super(Work, cls)._get_invoiced_amount_timesheet(d_works))
-        return res
+    def _get_total_progress(cls, works):
+        # TODO: it could replace total_progress_quantity?
+        service_works = []
+        result = {}
+        for work in works:
+            if work.invoice_product_type == 'service':
+                service_works.append(work)
+            else:
+                result[work.id] = 0
+        if service_works:
+            result.update(
+                super(Work, cls)._get_total_progress(service_works))
+        return result
 
     @classmethod
-    def _get_duration_to_invoice_progress(cls, works):
-        return cls._get_duration_to_invoice_timesheet(works)
+    def _get_invoice_values(cls, works, name):
+        if name in ('invoiced_duration', 'duration_to_invoice'):
+            service_works = []
+            res = {}
+            default_value = getattr(cls, 'default_%s' % name)()
+            for work in works:
+                if work.invoice_product_type == 'goods':
+                    res[work.id] = default_value
+                else:
+                    service_works.append(work)
+            if service_works:
+                res.update(
+                    super(Work, cls)._get_invoice_values(service_works, name))
+            return res
+        # name == invoiced_amount
+        # it will call _get_invoiced_amount_{manual,effort,progress,timesheet}
+        return super(Work, cls)._get_invoice_values(works, name)
 
     @classmethod
     def _get_invoiced_amount_effort(cls, works):
-        Currency = Pool().get('currency.currency')
+        pool = Pool()
+        Currency = pool.get('currency.currency')
+        Uom = pool.get('product.uom')
 
-        res = dict.fromkeys((w.id for w in works), Decimal(0))
-        d_works = [x for x in works if x.invoice_product_type == 'service']
-        g_works = [x for x in works if x.invoice_product_type == 'goods']
-        res.update(super(Work, cls)._get_invoiced_amount_effort(d_works))
-
-        for work in g_works:
-            currency = work.company.currency
-            invoice_line = work.invoice_line
-            if invoice_line:
-                invoice_currency = (invoice_line.invoice.currency
-                    if invoice_line.invoice else invoice_line.currency)
-                res[work.id] = Currency.compute(invoice_currency,
-                    invoice_line.unit_price *
-                    Decimal(str(invoice_line.quantity)),
-                    currency)
-        return res
+        service_works = []
+        amounts = {}
+        for work in works:
+            if work.invoice_product_type == 'service':
+                service_works.append(work)
+            else:
+                currency = work.company.currency
+                invoice_line = work.invoice_line
+                if invoice_line:
+                    # If get fields from invoice_line has performance problems,
+                    # construct a dictionary with used fields
+                    invoice_currency = (invoice_line.invoice.currency
+                        if invoice_line.invoice else invoice_line.currency)
+                    # It doesn't use invoice_line amount because one invoice
+                    # line could invoice several works
+                    unit_price = Uom.compute_price(
+                        invoice_line.unit, invoice_line.unit_price, work.uom)
+                    amounts[work.id] = Currency.compute(
+                        invoice_currency,
+                        Decimal(str(work.quantity)) * unit_price,
+                        currency)
+                # else is not necessary because default value is set on
+                # super()._get_invoice_values()
+        amounts.update(
+            super(Work, cls)._get_invoiced_amount_effort(service_works))
+        return amounts
 
     @classmethod
     def _get_invoiced_amount_progress(cls, works):
         pool = Pool()
         Currency = pool.get('currency.currency')
-        InvoicedProgress = pool.get('project.work.invoiced_progress')
+        Uom = pool.get('product.uom')
 
-        res = dict.fromkeys((w.id for w in works), Decimal(0))
-        d_works = [x for x in works if x.invoice_product_type == 'service']
-        g_works = [x for x in works if x.invoice_product_type == 'goods']
+        service_works = []
+        amounts = {}
+        for work in works:
+            if work.invoice_product_type == 'service':
+                service_works.append(work)
+            else:
+                currency = work.company.currency
+                amount = Decimal(0)
+                for invoiced_progress in work.invoiced_progress:
+                    invoice_line = invoiced_progress.invoice_line
+                    if invoice_line:
+                        invoice_currency = (invoice_line.invoice.currency
+                            if invoice_line.invoice else invoice_line.currency)
+                        # It doesn't use invoice_line amount because one
+                        # invoice line could invoice several works
+                        unit_price = Uom.compute_price(
+                            invoice_line.unit, invoice_line.unit_price,
+                            work.uom)
+                        amount += Currency.compute(
+                            invoice_currency,
+                            Decimal(str(invoiced_progress.quantity))
+                            * unit_price,
+                            currency)
+                amounts[work.id] = currency.round(amount)
+        amounts.update(
+            super(Work, cls)._get_invoiced_amount_progress(service_works))
+        return amounts
 
-        res.update(super(Work, cls)._get_invoiced_amount_progress(d_works))
+    @classmethod
+    def _get_invoiced_amount_timesheet(cls, works):
+        service_works, goods_works = [], []
+        for work in works:
+            if work.invoice_product_type == 'service':
+                service_works.append(work)
+            else:
+                goods_works.append(work)
 
-        for work in g_works:
-            currency = work.company.currency
-            invoiced_progresses = InvoicedProgress.search([
-                ('work', '=', work.id)
-                ])
-            for invoiced_progress in invoiced_progresses:
-                invoice_line = invoiced_progress.invoice_line
-                if invoice_line:
-                    invoice_currency = (invoice_line.invoice.currency
-                        if invoice_line.invoice else invoice_line.currency)
-                    res[work.id] += Currency.compute(invoice_currency,
-                        invoice_line.unit_price *
-                        Decimal(str(invoice_line.quantity)),
-                        currency)
-        return res
+        amounts = cls._get_invoiced_amount_progress(goods_works)
+        amounts.update(
+            super(Work, cls)._get_invoiced_amount_timesheet(service_works))
+        return amounts
 
     @classmethod
     def _get_revenue(cls, works):
-        result = super(Work, cls)._get_revenue(works)
+        service_works = []
+        result = {}
         for work in works:
-            if work.invoice_product_type != 'service':
+            if work.invoice_product_type == 'service':
+                service_works.append(work)
+            else:
                 result[work.id] = (Decimal(str(work.quantity))
                     * (work.list_price or Decimal(0)))
+        if service_works:
+            result.update(super(Work, cls)._get_revenue(service_works))
         return result
 
     @classmethod
     def _get_cost(cls, works):
-        result = super(Work, cls)._get_cost(works)
+        service_works = []
+        result = {}
         for work in works:
-            if work.invoice_product_type != 'service':
-                if work.product_goods:
-                    result[work.id] = (Decimal(str(work.quantity)) *
-                            work.product_goods.cost_price)
-                else:
-                    result[work.id] = Decimal(0)
+            if work.invoice_product_type == 'service':
+                service_works.append(work)
+            else:
+                result[work.id] = (Decimal(str(work.quantity)) *
+                        work.product_goods.cost_price)
+        if service_works:
+            result.update(super(Work, cls)._get_cost(service_works))
         return result
 
     def _get_lines_to_invoice_effort(self):
@@ -360,7 +463,6 @@ class Work:
             return []
 
         invoiced_quantity = sum(x.quantity for x in self.invoiced_progress)
-
         quantity = self.progress_quantity - invoiced_quantity
         if quantity > 0:
             if not self.product_goods:
@@ -377,6 +479,7 @@ class Work:
                     'origin': invoiced_progress,
                     'description': self.name,
                     }]
+        return []
 
     def _get_lines_to_invoice_timesheet(self):
         if self.invoice_product_type == 'service':
@@ -413,6 +516,8 @@ class Work:
         invoice_line.type = 'line'
         invoice_line.quantity = Uom.compute_qty(unit, quantity,
             product.default_uom)
+        # TODO: why don't use key['unit'] and avoid conversion here and in lot
+        # of places? it's also applicable on project_invoice module
         invoice_line.unit = product.default_uom
         invoice_line.product = product
         invoice_line.description = key['description']
