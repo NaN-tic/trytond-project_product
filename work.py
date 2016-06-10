@@ -43,9 +43,13 @@ class WorkInvoicedProgress:
 
 
 def __get_service_goods(works, service_computation, goods_computation):
-    """service_coputation is a classmethod function, usually a super call
+    """
+    service_coputation is a classmethod function, usually a super call
     goods_computation is an static/lambda function that receives single
         work as param
+
+    It's used on most functions used by get_total(), calling the super for
+    service works and doing a "work instance based calculation" for goods works
     """
     service_works = []
     result = {}
@@ -274,6 +278,7 @@ class Work:
 
     @classmethod
     def _get_timesheet_duration(cls, works):
+        """Return 0 timedelta for goods works"""
         return __get_service_goods(
             works,
             super(Work, cls)._get_timesheet_duration,
@@ -281,6 +286,7 @@ class Work:
 
     @classmethod
     def _get_total_effort(cls, works):
+        """Return 0 timedelta for goods works"""
         return __get_service_goods(
             works,
             super(Work, cls)._get_total_effort,
@@ -288,6 +294,7 @@ class Work:
 
     @classmethod
     def _get_total_progress(cls, works):
+        """Return 0 for goods works"""
         # TODO: it could replace total_progress_quantity?
         return __get_service_goods(
             works,
@@ -340,7 +347,7 @@ class Work:
         return __get_service_goods(
             works,
             super(Work, cls)._get_invoiced_amount_effort,
-            lambda work: __get_invoiced_amount_effort)
+            __get_invoiced_amount_effort)
 
     @classmethod
     def _get_invoiced_amount_progress(cls, works):
@@ -371,7 +378,7 @@ class Work:
         return __get_service_goods(
             works,
             super(Work, cls)._get_invoiced_amount_progress,
-            lambda work: __get_invoiced_amount_progress)
+            __get_invoiced_amount_progress)
 
     @classmethod
     def _get_invoiced_amount_timesheet(cls, works):
@@ -389,6 +396,7 @@ class Work:
 
     @classmethod
     def _get_revenue(cls, works):
+        """Return the quantity * list_price for goods works"""
         return __get_service_goods(
             works,
             super(Work, cls)._get_revenue,
@@ -397,6 +405,7 @@ class Work:
 
     @classmethod
     def _get_cost(cls, works):
+        """Return the quantity * product's cost price for goods works"""
         return __get_service_goods(
             works,
             super(Work, cls)._get_cost,
