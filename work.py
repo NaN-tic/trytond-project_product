@@ -42,7 +42,7 @@ class WorkInvoicedProgress:
         return 2
 
 
-def __get_service_goods(works, service_computation, goods_computation):
+def get_service_goods_aux(works, service_computation, goods_computation):
     """
     service_coputation is a classmethod function, usually a super call
     goods_computation is an static/lambda function that receives single
@@ -279,7 +279,7 @@ class Work:
     @classmethod
     def _get_timesheet_duration(cls, works):
         """Return 0 timedelta for goods works"""
-        return __get_service_goods(
+        return get_service_goods_aux(
             works,
             super(Work, cls)._get_timesheet_duration,
             lambda work: datetime.timedelta())
@@ -287,7 +287,7 @@ class Work:
     @classmethod
     def _get_total_effort(cls, works):
         """Return 0 timedelta for goods works"""
-        return __get_service_goods(
+        return get_service_goods_aux(
             works,
             super(Work, cls)._get_total_effort,
             lambda work: datetime.timedelta())
@@ -296,7 +296,7 @@ class Work:
     def _get_total_progress(cls, works):
         """Return 0 for goods works"""
         # TODO: it could replace total_progress_quantity?
-        return __get_service_goods(
+        return get_service_goods_aux(
             works,
             super(Work, cls)._get_total_progress,
             lambda work: 0)
@@ -344,7 +344,7 @@ class Work:
                     currency)
             return Decimal(0)
 
-        return __get_service_goods(
+        return get_service_goods_aux(
             works,
             super(Work, cls)._get_invoiced_amount_effort,
             __get_invoiced_amount_effort)
@@ -375,7 +375,7 @@ class Work:
                         currency)
             return currency.round(amount)
 
-        return __get_service_goods(
+        return get_service_goods_aux(
             works,
             super(Work, cls)._get_invoiced_amount_progress,
             __get_invoiced_amount_progress)
@@ -397,7 +397,7 @@ class Work:
     @classmethod
     def _get_revenue(cls, works):
         """Return the quantity * list_price for goods works"""
-        return __get_service_goods(
+        return get_service_goods_aux(
             works,
             super(Work, cls)._get_revenue,
             lambda work: (Decimal(str(work.quantity))
@@ -406,7 +406,7 @@ class Work:
     @classmethod
     def _get_cost(cls, works):
         """Return the quantity * product's cost price for goods works"""
-        return __get_service_goods(
+        return get_service_goods_aux(
             works,
             super(Work, cls)._get_cost,
             lambda work: (Decimal(str(work.quantity)) *
