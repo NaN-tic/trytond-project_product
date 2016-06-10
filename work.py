@@ -42,6 +42,23 @@ class WorkInvoicedProgress:
         return 2
 
 
+def __get_service_goods(works, service_computation, goods_computation):
+    """service_coputation is a classmethod function, usually a super call
+    goods_computation is an static/lambda function that receives single
+        work as param
+    """
+    service_works = []
+    result = {}
+    for work in works:
+        if work.invoice_product_type == 'service':
+            service_works.append(work)
+        else:
+            result[work.id] = goods_computation(work)
+    if service_works:
+        result.update(service_computation(service_works))
+    return result
+
+
 class Work:
     __name__ = 'project.work'
     __metaclass__ = PoolMeta
@@ -257,46 +274,25 @@ class Work:
 
     @classmethod
     def _get_timesheet_duration(cls, works):
-        service_works = []
-        result = {}
-        for work in works:
-            if work.invoice_product_type == 'service':
-                service_works.append(work)
-            else:
-                result[work.id] = datetime.timedelta()
-        if service_works:
-            result.update(
-                super(Work, cls)._get_timesheet_duration(service_works))
-        return result
+        return __get_service_goods(
+            works,
+            super(Work, cls)._get_timesheet_duration,
+            lambda work: datetime.timedelta())
 
     @classmethod
     def _get_total_effort(cls, works):
-        service_works = []
-        result = {}
-        for work in works:
-            if work.invoice_product_type == 'service':
-                service_works.append(work)
-            else:
-                result[work.id] = datetime.timedelta()
-        if service_works:
-            result.update(
-                super(Work, cls)._get_total_effort(service_works))
-        return result
+        return __get_service_goods(
+            works,
+            super(Work, cls)._get_total_effort,
+            lambda work: datetime.timedelta())
 
     @classmethod
     def _get_total_progress(cls, works):
         # TODO: it could replace total_progress_quantity?
-        service_works = []
-        result = {}
-        for work in works:
-            if work.invoice_product_type == 'service':
-                service_works.append(work)
-            else:
-                result[work.id] = 0
-        if service_works:
-            result.update(
-                super(Work, cls)._get_total_progress(service_works))
-        return result
+        return __get_service_goods(
+            works,
+            super(Work, cls)._get_total_progress,
+            lambda work: 0)
 
     @classmethod
     def _get_invoice_values(cls, works, name):
@@ -323,32 +319,28 @@ class Work:
         Currency = pool.get('currency.currency')
         Uom = pool.get('product.uom')
 
-        service_works = []
-        amounts = {}
-        for work in works:
-            if work.invoice_product_type == 'service':
-                service_works.append(work)
-            else:
-                currency = work.company.currency
-                invoice_line = work.invoice_line
-                if invoice_line:
-                    # If get fields from invoice_line has performance problems,
-                    # construct a dictionary with used fields
-                    invoice_currency = (invoice_line.invoice.currency
-                        if invoice_line.invoice else invoice_line.currency)
-                    # It doesn't use invoice_line amount because one invoice
-                    # line could invoice several works
-                    unit_price = Uom.compute_price(
-                        invoice_line.unit, invoice_line.unit_price, work.uom)
-                    amounts[work.id] = Currency.compute(
-                        invoice_currency,
-                        Decimal(str(work.quantity)) * unit_price,
-                        currency)
-                # else is not necessary because default value is set on
-                # super()._get_invoice_values()
-        amounts.update(
-            super(Work, cls)._get_invoiced_amount_effort(service_works))
-        return amounts
+        def __get_invoiced_amount_effort(work):
+            currency = work.company.currency
+            invoice_line = work.invoice_line
+            if invoice_line:
+                # If get fields from invoice_line has performance problems,
+                # construct a dictionary with used fields
+                invoice_currency = (invoice_line.invoice.currency
+                    if invoice_line.invoice else invoice_line.currency)
+                # It doesn't use invoice_line amount because one invoice
+                # line could invoice several works
+                unit_price = Uom.compute_price(
+                    invoice_line.unit, invoice_line.unit_price, work.uom)
+                return Currency.compute(
+                    invoice_currency,
+                    Decimal(str(work.quantity)) * unit_price,
+                    currency)
+            return Decimal(0)
+
+        return __get_service_goods(
+            works,
+            super(Work, cls)._get_invoiced_amount_effort,
+            lambda work: __get_invoiced_amount_effort)
 
     @classmethod
     def _get_invoiced_amount_progress(cls, works):
@@ -356,33 +348,30 @@ class Work:
         Currency = pool.get('currency.currency')
         Uom = pool.get('product.uom')
 
-        service_works = []
-        amounts = {}
-        for work in works:
-            if work.invoice_product_type == 'service':
-                service_works.append(work)
-            else:
-                currency = work.company.currency
-                amount = Decimal(0)
-                for invoiced_progress in work.invoiced_progress:
-                    invoice_line = invoiced_progress.invoice_line
-                    if invoice_line:
-                        invoice_currency = (invoice_line.invoice.currency
-                            if invoice_line.invoice else invoice_line.currency)
-                        # It doesn't use invoice_line amount because one
-                        # invoice line could invoice several works
-                        unit_price = Uom.compute_price(
-                            invoice_line.unit, invoice_line.unit_price,
-                            work.uom)
-                        amount += Currency.compute(
-                            invoice_currency,
-                            Decimal(str(invoiced_progress.quantity))
-                            * unit_price,
-                            currency)
-                amounts[work.id] = currency.round(amount)
-        amounts.update(
-            super(Work, cls)._get_invoiced_amount_progress(service_works))
-        return amounts
+        def __get_invoiced_amount_progress(work):
+            currency = work.company.currency
+            amount = Decimal(0)
+            for invoiced_progress in work.invoiced_progress:
+                invoice_line = invoiced_progress.invoice_line
+                if invoice_line:
+                    invoice_currency = (invoice_line.invoice.currency
+                        if invoice_line.invoice else invoice_line.currency)
+                    # It doesn't use invoice_line amount because one
+                    # invoice line could invoice several works
+                    unit_price = Uom.compute_price(
+                        invoice_line.unit, invoice_line.unit_price,
+                        work.uom)
+                    amount += Currency.compute(
+                        invoice_currency,
+                        Decimal(str(invoiced_progress.quantity))
+                        * unit_price,
+                        currency)
+            return currency.round(amount)
+
+        return __get_service_goods(
+            works,
+            super(Work, cls)._get_invoiced_amount_progress,
+            lambda work: __get_invoiced_amount_progress)
 
     @classmethod
     def _get_invoiced_amount_timesheet(cls, works):
@@ -400,31 +389,19 @@ class Work:
 
     @classmethod
     def _get_revenue(cls, works):
-        service_works = []
-        result = {}
-        for work in works:
-            if work.invoice_product_type == 'service':
-                service_works.append(work)
-            else:
-                result[work.id] = (Decimal(str(work.quantity))
-                    * (work.list_price or Decimal(0)))
-        if service_works:
-            result.update(super(Work, cls)._get_revenue(service_works))
-        return result
+        return __get_service_goods(
+            works,
+            super(Work, cls)._get_revenue,
+            lambda work: (Decimal(str(work.quantity))
+                * (work.list_price or Decimal(0))))
 
     @classmethod
     def _get_cost(cls, works):
-        service_works = []
-        result = {}
-        for work in works:
-            if work.invoice_product_type == 'service':
-                service_works.append(work)
-            else:
-                result[work.id] = (Decimal(str(work.quantity)) *
-                        work.product_goods.cost_price)
-        if service_works:
-            result.update(super(Work, cls)._get_cost(service_works))
-        return result
+        return __get_service_goods(
+            works,
+            super(Work, cls)._get_cost,
+            lambda work: (Decimal(str(work.quantity)) *
+                work.product_goods.cost_price))
 
     def _get_lines_to_invoice_effort(self):
         pool = Pool()
