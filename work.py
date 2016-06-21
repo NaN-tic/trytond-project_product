@@ -103,6 +103,9 @@ class Work:
         fields.Numeric('Percent Progress Amount', digits=price_digits),
         'get_total')
 
+    invoiced_quantity = fields.Function(fields.Float('Invoiced Quantity',
+        digits=(16, Eval('uom_digits', 2))), 'get_invoiced_quantity')
+
     @classmethod
     def __setup__(cls):
         super(Work, cls).__setup__()
@@ -121,9 +124,7 @@ class Work:
             if 'invoice_product_type' not in field_depends:
                 field_depends.append('invoice_product_type')
         if 'invoice' in cls._buttons:
-            cls._buttons['invoice']['readonly'] = (
-                cls._buttons['invoice']['readonly']
-                & (Eval('invoice_product_type', 'service') == 'service'))
+            cls._buttons['invoice']['readonly'] = False
 
     @classmethod
     def view_attributes(cls):
@@ -168,39 +169,13 @@ class Work:
             return self.uom.digits
         return 2
 
-    # TODO: remove, it isn't necessary
-    # @fields.depends('quantity', 'invoice_product_type', 'uom',
-    #     'effort_duration')
-    # def on_change_with_quantity(self, name=None):
-    #     pool = Pool()
-    #     ModelData = pool.get('ir.model.data')
-    #     quantity = self.quantity or 0.0
-    #     if self.invoice_product_type == 'service':
-    #         uom = self.uom
-    #         effort_duration = self.effort_duration
-    #         if (uom and uom.id == ModelData.get_id('product', 'uom_cat_time')
-    #                 and effort_duration):
-    #             total_seconds = effort_duration.total_seconds()
-    #             quantity = total_seconds * uom.rate
-    #     return quantity
-
-    # TODO: remove, it isn't necessary
-    # @fields.depends('progress_quantity', 'quantity')
-    # def on_change_with_progress(self):
-    #     if self.quantity:
-    #         return (self.progress_quantity or 0.0) / self.quantity
-    #     return 0.0
-
     @property
     def total_progress_quantity(self):
-        # TODO: it's necessary? it's extended in project_certification
-        # pool = Pool()
-        # Uom = pool.get('product.uom')
-        # if self.product_goods and self.uom:
-        #     return Uom.compute_qty(
-        #             self.uom, self.progress_quantity or 0,
-        #             self.product_goods.default_uom)
         return self.progress_quantity
+
+    def get_invoiced_quantity(self, name):
+        invoiced_quantity = sum(x.quantity for x in self.invoiced_progress)
+        return invoiced_quantity
 
     @classmethod
     def get_total(cls, works, names):
