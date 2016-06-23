@@ -143,6 +143,10 @@ class Work:
     def default_invoice_product_type():
         return 'service'
 
+    @staticmethod
+    def default_progress_quantity():
+        return 0.0
+
     @fields.depends('product_goods')
     def on_change_product_goods(self):
         if self.product_goods:
