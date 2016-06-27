@@ -86,7 +86,8 @@ class Work:
     quantity = fields.Float('Quantity', digits=(16, Eval('uom_digits', 2)),
         states=STATES, depends=DEPENDS + ['uom_digits'])
     progress_quantity = fields.Float('Progress Quantity',
-        digits=(16, Eval('uom_digits', 2)), domain=[
+        digits=(16, Eval('uom_digits', 2)),
+        domain=[
             ['OR',
                 ('progress_quantity', '=', None),
                 [
@@ -95,7 +96,8 @@ class Work:
                     ],
                 ]
             ],
-        states=STATES, depends=DEPENDS + ['uom_digits', 'quantity'])
+        states=STATES, depends=DEPENDS + ['uom_digits', 'quantity',
+            'progress_quantity'])
     progress_amount = fields.Function(fields.Numeric('Progress Amount',
             digits=price_digits),
         'get_total')
@@ -142,10 +144,6 @@ class Work:
     @staticmethod
     def default_invoice_product_type():
         return 'service'
-
-    @staticmethod
-    def default_progress_quantity():
-        return 0.0
 
     @fields.depends('product_goods')
     def on_change_product_goods(self):
