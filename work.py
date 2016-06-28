@@ -171,7 +171,6 @@ class Work:
             return self.uom.digits
         return 2
 
-    @property
     def total_progress_quantity(self):
         return self.progress_quantity
 
@@ -243,7 +242,7 @@ class Work:
                     * Decimal(str(work.effort_hours * (work.progress or 0))))
             elif work.invoice_product_type == 'goods':
                 amount = ((work.list_price or Decimal(0))
-                    * Decimal(str(work.total_progress_quantity)))
+                    * Decimal(str(work.total_progress_quantity())))
             else:
                 amount = Decimal(0)
             result[work.id] = amount.quantize(Decimal(str(10 ** - digits)))
