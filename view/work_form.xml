@@ -27,8 +27,8 @@
         <newline/>
         <label name="quantity"/>
         <field name="quantity"/>
-        <label name="progress_quantity"/>
-        <field name="progress_quantity"/>
+        <label name="progress_quantity_func"/>
+        <field name="progress_quantity_func"/>
         <label name="uom"/>
         <field name="uom"/>
         <separator id="service" string="Service" colspan="6"/>

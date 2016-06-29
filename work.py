@@ -98,6 +98,10 @@ class Work:
             ],
         states=STATES, depends=DEPENDS + ['uom_digits', 'quantity',
             'progress_quantity'])
+    progress_quantity_func = fields.Function(fields.Float(
+        'Progress Quantity', digits=price_digits),
+        'total_progress_quantity', setter='set_progress_quantity')
+
     progress_amount = fields.Function(fields.Numeric('Progress Amount',
             digits=price_digits),
         'get_total')
@@ -171,7 +175,13 @@ class Work:
             return self.uom.digits
         return 2
 
-    def total_progress_quantity(self):
+    @classmethod
+    def set_progress_quantity(cls, works, name, value):
+        cls.write(works, {
+                'progress_quantity': value,
+                })
+
+    def total_progress_quantity(self, name=None):
         return self.progress_quantity
 
     def get_invoiced_quantity(self, name):
