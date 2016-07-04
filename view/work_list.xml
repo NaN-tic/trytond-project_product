@@ -5,10 +5,12 @@
     <xpath expr="/tree/field[@name='timesheet_duration']" position="replace"/>
     <xpath expr="/tree/field[@name='total_effort']" position="replace"/>
     <xpath expr="/tree/field[@name='product']" position="after">
-        <field name="product_goods"/>
+    <field name="product_goods"/>
     </xpath>
     <xpath expr="/tree/field[@name='total_progress']" position="replace">
-        <!--<field name="progress_amount"/>-->
+        <field name="quantity"/>
+        <field name="progress_quantity_func"/>
+        <field name="progress_amount"/>
         <field name="percent_progress_amount" widget="progressbar" expand="1"/>
     </xpath>
 </data>
