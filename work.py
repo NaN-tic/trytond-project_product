@@ -388,11 +388,20 @@ class Work:
     @classmethod
     def _get_cost(cls, works):
         """Return the quantity * product's cost price for goods works"""
-        return get_service_goods_aux(
-            works,
+
+        works_c = works
+        if hasattr(cls, 'purchase_lines'):
+            work_p = [x for x in works if x.purchase_lines]
+            res = super(Work, cls)._get_cost(work_p)
+            works_c = [x for x in works if not x.purchase_lines]
+
+
+        res.update(get_service_goods_aux(
+            works_c,
             super(Work, cls)._get_cost,
             lambda work: (Decimal(str(work.quantity)) *
-                work.product_goods.cost_price))
+                work.product_goods.cost_price)))
+        return res
 
     def _get_lines_to_invoice_effort(self):
         pool = Pool()
