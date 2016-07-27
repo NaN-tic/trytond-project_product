@@ -110,7 +110,8 @@ class Work:
         'get_total')
 
     invoiced_quantity = fields.Function(fields.Float('Invoiced Quantity',
-        digits=(16, Eval('uom_digits', 2))), 'get_invoiced_quantity')
+            digits=(16, Eval('uom_digits', 2)), depends=['uom_digits']),
+        'get_invoiced_quantity')
 
     @classmethod
     def __setup__(cls):
@@ -390,18 +391,18 @@ class Work:
         """Return the quantity * product's cost price for goods works"""
 
         works_c = works
+        costs = {}
         if hasattr(cls, 'purchase_lines'):
             work_p = [x for x in works if x.purchase_lines]
-            res = super(Work, cls)._get_cost(work_p)
+            costs = super(Work, cls)._get_cost(work_p)
             works_c = [x for x in works if not x.purchase_lines]
 
-
-        res.update(get_service_goods_aux(
+        costs.update(get_service_goods_aux(
             works_c,
             super(Work, cls)._get_cost,
             lambda work: (Decimal(str(work.quantity)) *
                 work.product_goods.cost_price)))
-        return res
+        return costs
 
     def _get_lines_to_invoice_effort(self):
         pool = Pool()
