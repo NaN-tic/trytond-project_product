@@ -9,7 +9,7 @@ from trytond.pyson import Eval
 
 from trytond.modules.product import price_digits
 
-__all__ = ['Work', 'WorkInvoicedProgress']
+__all__ = ['Work', 'WorkInvoicedProgress', 'get_service_goods_aux']
 
 STATES = {
     'required': Eval('invoice_product_type') == 'goods',
