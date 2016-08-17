@@ -23,21 +23,21 @@ def suite():
         if test not in suite and isinstance(test, doctest.DocTestCase):
             suite.addTest(test)
 
-    suite.addTests(doctest.DocFileSuite(
-            'scenario_project_product_effort.rst',
-            setUp=doctest_setup, tearDown=doctest_teardown, encoding='utf-8',
-            checker=doctest_checker,
-            optionflags=doctest.REPORT_ONLY_FIRST_FAILURE))
-    suite.addTests(doctest.DocFileSuite(
-            'scenario_project_product_timesheet_goods.rst',
-            setUp=doctest_setup, tearDown=doctest_teardown, encoding='utf-8',
-            checker=doctest_checker,
-            optionflags=doctest.REPORT_ONLY_FIRST_FAILURE))
-    suite.addTests(doctest.DocFileSuite(
-            'scenario_project_product_timesheet_service.rst',
-            setUp=doctest_setup, tearDown=doctest_teardown, encoding='utf-8',
-            checker=doctest_checker,
-            optionflags=doctest.REPORT_ONLY_FIRST_FAILURE))
+    # suite.addTests(doctest.DocFileSuite(
+    #         'scenario_project_product_effort.rst',
+    #         setUp=doctest_setup, tearDown=doctest_teardown, encoding='utf-8',
+    #         checker=doctest_checker,
+    #         optionflags=doctest.REPORT_ONLY_FIRST_FAILURE))
+    # suite.addTests(doctest.DocFileSuite(
+    #         'scenario_project_product_timesheet_goods.rst',
+    #         setUp=doctest_setup, tearDown=doctest_teardown, encoding='utf-8',
+    #         checker=doctest_checker,
+    #         optionflags=doctest.REPORT_ONLY_FIRST_FAILURE))
+    # suite.addTests(doctest.DocFileSuite(
+    #         'scenario_project_product_timesheet_service.rst',
+    #         setUp=doctest_setup, tearDown=doctest_teardown, encoding='utf-8',
+    #         checker=doctest_checker,
+    #         optionflags=doctest.REPORT_ONLY_FIRST_FAILURE))
     suite.addTests(doctest.DocFileSuite(
             'scenario_project_product_progress.rst',
             setUp=doctest_setup, tearDown=doctest_teardown, encoding='utf-8',

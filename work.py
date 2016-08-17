@@ -257,6 +257,10 @@ class Work:
             else:
                 amount = Decimal(0)
             result[work.id] = amount.quantize(Decimal(str(10 ** - digits)))
+
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.info(result)
         return result
 
     @classmethod

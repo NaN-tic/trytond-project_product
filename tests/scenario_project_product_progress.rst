@@ -128,7 +128,6 @@ Create a Project::
     >>> ProjectWork = Model.get('project.work')
     >>> TimesheetWork = Model.get('timesheet.work')
     >>> project = ProjectWork()
-    >>> project.name = 'Test progress'
     >>> project.type = 'project'
     >>> project.party = customer
     >>> project.project_invoice_method = 'progress'
@@ -137,19 +136,7 @@ Create a Project::
     >>> project.quantity = 10.0
     >>> project.unit_price = Decimal('100.0')
     >>> project.progress_quantity = 5.0
-    >>> task = ProjectWork()
-    >>> task.name = 'Service Task'
-    >>> work = TimesheetWork()
-    >>> work.name = 'Test progress work'
-    >>> work.save()
-    >>> task.work = work
-    >>> task.type = 'task'
-    >>> task.invoice_product_type = 'goods'
-    >>> task.product_goods = good
-    >>> task.quantity = 10.0
-    >>> task.unit_price = Decimal('20.0')
-    >>> task.progress_quantity = 5.0
-    >>> project.children.append(task)
+    >>> project.name = 'Test progress'
     >>> project.save()
 
 Check project progress::
@@ -157,10 +144,28 @@ Check project progress::
     >>> project.reload()
     >>> project.progress_quantity
     5.0
+    >>> project.unit_price
+    Decimal('100.0')
     >>> project.progress_amount
-    600.0
+    Decimal('500.0000')
     >>> project.invoiced_amount
-    Decimal('0')
+    Decimal('0.00')
+
+    >>> task = ProjectWork()
+    >>> task.type = 'task'
+    >>> task.invoice_product_type = 'goods'
+    >>> task.product = goods
+    >>> task.quantity = 10.0
+    >>> task.unit_price = Decimal('20.0')
+    >>> task.progress_quantity = 5.0
+    >>> task.parent = project
+    >>> task.name = 'Service Task'
+    >>> task.save()
+    >>> task.progress_amount
+    Decimal('100.0000')
+    >>> project.progress_amount
+    Decimal('600.0000')
+
 
 Invoice project::
 
@@ -177,7 +182,7 @@ Do 100% of task and start another one::
 
     >>> config.user = project_user.id
     >>> task, = project.children
-    >>> task.progress_amount = 10
+    >>> task.progress_quantity = 10
     >>> task.save()
     >>> task = ProjectWork()
     >>> task.name = 'Good Task'
