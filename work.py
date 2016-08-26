@@ -15,7 +15,7 @@ STATES = {
     'required': Eval('invoice_product_type') == 'goods',
     'invisible': Eval('invoice_product_type') != 'goods',
     }
-DEPENDS = ['invoice_product_type', 'type']
+DEPENDS = ['invoice_product_type']
 
 
 class WorkInvoicedProgress:
@@ -98,8 +98,8 @@ class Work:
             ],
         states=STATES, depends=DEPENDS + ['uom_digits', 'quantity',
             'progress_quantity'])
-    progress_quantity_func = fields.Function(fields.Float(
-        'Progress Quantity', digits=price_digits),
+    progress_quantity_func = fields.Function(fields.Float('Progress Quantity',
+            digits=price_digits, states=STATES, depends=DEPENDS),
         'total_progress_quantity', setter='set_progress_quantity')
 
     progress_amount = fields.Function(fields.Numeric('Progress Amount',
