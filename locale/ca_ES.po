@@ -1,0 +1,83 @@
+#
+msgid ""
+msgstr "Content-Type: text/plain; charset=utf-8\n"
+
+msgctxt "field:project.work,invoice_product_type:"
+msgid "Invoice Product Type"
+msgstr "Tipus producte facturació"
+
+msgctxt "field:project.work,invoiced_quantity:"
+msgid "Invoiced Quantity"
+msgstr "Quantitat facturada"
+
+msgctxt "field:project.work,percent_progress_amount:"
+msgid "Percent Progress Amount"
+msgstr "Progrés (import)"
+
+msgctxt "field:project.work,product_goods:"
+msgid "Product for Goods"
+msgstr "Producte de bens"
+
+msgctxt "field:project.work,product_goods_uom_category:"
+msgid "Product Uom Category"
+msgstr "Categoria UdM del producte"
+
+msgctxt "field:project.work,progress_amount:"
+msgid "Progress Amount"
+msgstr "Progrés (import)"
+
+msgctxt "field:project.work,progress_quantity:"
+msgid "Progress Quantity"
+msgstr "Progrés (quantitat)"
+
+msgctxt "field:project.work,progress_quantity_func:"
+msgid "Progress Quantity"
+msgstr "Progrés (quantitat)"
+
+msgctxt "field:project.work,quantity:"
+msgid "Quantity"
+msgstr "Quantitat"
+
+msgctxt "field:project.work,uom:"
+msgid "UoM"
+msgstr "UdM"
+
+msgctxt "field:project.work,uom_digits:"
+msgid "UoM Digits"
+msgstr "Decimals UdM"
+
+msgctxt "field:project.work.invoiced_progress,quantity:"
+msgid "Quantity"
+msgstr "Quantitat"
+
+msgctxt "field:project.work.invoiced_progress,uom:"
+msgid "UoM"
+msgstr "UdM"
+
+msgctxt "field:project.work.invoiced_progress,uom_digits:"
+msgid "UoM Digits"
+msgstr "Decimals UdM"
+
+msgctxt "selection:project.work,invoice_product_type:"
+msgid "Goods"
+msgstr "Béns"
+
+msgctxt "selection:project.work,invoice_product_type:"
+msgid "Service"
+msgstr "Servei"
+
+msgctxt "view:project.work:"
+msgid "%"
+msgstr "%"
+
+msgctxt "view:project.work:"
+msgid "Amounts"
+msgstr "Imports"
+
+msgctxt "view:project.work:"
+msgid "Goods"
+msgstr "Béns"
+
+msgctxt "view:project.work:"
+msgid "Service"
+msgstr "Servei"
