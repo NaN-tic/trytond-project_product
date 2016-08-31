@@ -73,6 +73,9 @@ class Work:
             ], 'Invoice Product Type', required=True, select=True)
     # TODO: we can use project_revenue's product field and change the domain
     product_goods = fields.Many2One('product.product', 'Product for Goods',
+        domain=[
+            ('type', '!=', 'service'),
+            ],
         states=STATES, depends=DEPENDS)
     product_goods_uom_category = fields.Function(
         fields.Many2One('product.uom.category', 'Product Uom Category'),
