@@ -29,6 +29,12 @@
         <field name="quantity"/>
         <label name="progress_quantity_func"/>
         <field name="progress_quantity_func"/>
+        <label name="progress_quantity_percent"/>
+        <group col="2" id="progress_percent">
+          <field name="progress_quantity_percent" factor="100" xexpand="0"/>
+          <label name="progress_quantity_percent" string="%" xalign="0.0" xexpand="1"/>
+        </group>
+
         <label name="uom"/>
         <field name="uom"/>
         <separator id="service" string="Service" colspan="6"/>

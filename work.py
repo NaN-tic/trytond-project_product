@@ -105,6 +105,10 @@ class Work:
             digits=price_digits, states=STATES, depends=DEPENDS),
         'total_progress_quantity', setter='set_progress_quantity')
 
+    progress_quantity_percent = fields.Function(
+        fields.Float('Percent Progress Quantity', digits=(16,
+            Eval('uom_digits', 2))), 'get_progress_quantity_percent')
+
     progress_amount = fields.Function(fields.Numeric('Progress Amount',
             digits=price_digits),
         'get_total')
@@ -188,6 +192,9 @@ class Work:
     def total_progress_quantity(self, name=None):
         return self.progress_quantity
 
+    def get_progress_quantity_percent(self, name=None):
+        return self.total_progress_quantity()/self.quantity
+
     def get_invoiced_quantity(self, name):
         invoiced_quantity = sum(x.quantity for x in self.invoiced_progress)
         return invoiced_quantity
@@ -220,6 +227,7 @@ class Work:
         #         _get_duration_timesheet(works, False) (project_invoice)
         #
         new_names = names[:]
+
         if 'percent_progress_amount' in names:
             if 'progress_amount' not in names:
                 new_names.append('progress_amount')
@@ -241,6 +249,7 @@ class Work:
                     pp_amount[work.id] = (p_amount[work.id] / revenue[work.id]
                         ).quantize(Decimal(str(10 ** - digits)))
             result['percent_progress_amount'] = pp_amount
+
         for key in result.keys():
             if key not in names:
                 del result[key]
@@ -380,32 +389,6 @@ class Work:
             super(Work, cls)._get_invoiced_amount_timesheet(service_works))
         return amounts
 
-    @classmethod
-    def _get_revenue(cls, works):
-        """Return the quantity * list_price for goods works"""
-        return get_service_goods_aux(
-            works,
-            super(Work, cls)._get_revenue,
-            lambda work: (Decimal(str(work.quantity))
-                * (work.list_price or Decimal(0))))
-
-    @classmethod
-    def _get_cost(cls, works):
-        """Return the quantity * product's cost price for goods works"""
-
-        works_c = works
-        costs = {}
-        if hasattr(cls, 'purchase_lines'):
-            work_p = [x for x in works if x.purchase_lines]
-            costs = super(Work, cls)._get_cost(work_p)
-            works_c = [x for x in works if not x.purchase_lines]
-
-        costs.update(get_service_goods_aux(
-            works_c,
-            super(Work, cls)._get_cost,
-            lambda work: (Decimal(str(work.quantity)) *
-                work.product_goods.cost_price)))
-        return costs
 
     def _get_lines_to_invoice_effort(self):
         pool = Pool()
