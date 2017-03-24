@@ -160,7 +160,6 @@ class Work:
     @fields.depends('product_goods')
     def on_change_product_goods(self):
         if self.product_goods:
-            self.name = self.name and self.product_goods.rec_name
             self.uom = self.product_goods.default_uom
             self.uom_digits = self.product_goods.default_uom.digits
             self.list_price = self.product_goods.list_price
