@@ -107,7 +107,8 @@ class Work:
 
     progress_quantity_percent = fields.Function(
         fields.Float('Percent Progress Quantity', digits=(16,
-            Eval('uom_digits', 2))), 'get_progress_quantity_percent')
+            Eval('uom_digits', 2)), depends=['uom_digits']),
+        'get_progress_quantity_percent')
 
     progress_amount = fields.Function(fields.Numeric('Progress Amount',
             digits=price_digits),
