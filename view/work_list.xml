@@ -2,17 +2,10 @@
 <!-- The COPYRIGHT file at the top level of this repository contains the full
      copyright notices and license terms. -->
 <data>
-    <xpath expr="/tree/field[@name='timesheet_duration']" position="replace"/>
-    <xpath expr="/tree/field[@name='total_effort']" position="replace"/>
-    <xpath expt="/tree/field[@name='total_progress'" position="replace">
     <xpath expr="/tree/field[@name='product']" position="after">
     <field name="product_goods"/>
     </xpath>
     <xpath expr="/tree/field[@name='state']" position="after">
-        <field name="quantity"/><!--
-        <field name="progress_quantity_func"/>
-        <field name="progress_amount"/>
-        <field name="percent_progress_amount" widget="progressbar" expand="1"/>
-    -->
+        <field name="quantity"/>
     </xpath>
 </data>
