@@ -194,7 +194,7 @@ class Work:
                 })
 
     def total_progress_quantity(self, name=None):
-        return self.progress_quantity
+        return self.progress_quantity or 0.0
 
     def get_progress_quantity_percent(self, name=None):
         return self.total_progress_quantity()/self.quantity
