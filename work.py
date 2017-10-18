@@ -156,7 +156,15 @@ class Work:
 
     @staticmethod
     def default_invoice_product_type():
-        return 'service'
+        Config = Pool().get('work.configuration')
+        config = Config(1)
+        return config.invoice_product_type or 'service'
+
+    @staticmethod
+    def default_product_goods():
+        Config = Pool().get('work.configuration')
+        config = Config(1)
+        return config.product_goods and config.product_goods.id or None
 
     @fields.depends('product_goods')
     def on_change_product_goods(self):

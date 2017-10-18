@@ -1,0 +1,11 @@
+<?xml version="1.0"?>
+<!-- The COPYRIGHT file at the top level of this repository contains the full
+     copyright notices and license terms. -->
+<data>
+    <xpath expr="/form" position="inside">
+        <label name="invoice_product_type"/>
+        <field name="invoice_product_type"/>
+        <label name="product_goods"/>
+        <field name="product_goods"/>
+    </xpath>
+</data>

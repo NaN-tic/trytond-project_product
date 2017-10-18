@@ -58,11 +58,27 @@ msgctxt "field:project.work.invoiced_progress,uom_digits:"
 msgid "UoM Digits"
 msgstr "Decimales UdM"
 
+msgctxt "field:work.configuration,invoice_product_type:"
+msgid "Invoice Product Type"
+msgstr "Tipo producto facturación"
+
+msgctxt "field:work.configuration,product_goods:"
+msgid "Product Goods"
+msgstr "Producto bienes"
+
 msgctxt "selection:project.work,invoice_product_type:"
 msgid "Goods"
 msgstr "Bienes"
 
 msgctxt "selection:project.work,invoice_product_type:"
+msgid "Service"
+msgstr "Servicio"
+
+msgctxt "selection:work.configuration,invoice_product_type:"
+msgid "Goods"
+msgstr "Bienes"
+
+msgctxt "selection:work.configuration,invoice_product_type:"
 msgid "Service"
 msgstr "Servicio"
 
