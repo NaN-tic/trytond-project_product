@@ -110,11 +110,11 @@ class Work:
             Eval('uom_digits', 2)), depends=['uom_digits']),
         'get_progress_quantity_percent')
 
-    progress_amount = fields.Function(fields.Numeric('Progress Amount',
+    progress_amount = fields.Function(fields.Numeric('Certifications',
             digits=price_digits),
         'get_total')
     percent_progress_amount = fields.Function(
-        fields.Numeric('Percent Progress Amount', digits=price_digits),
+        fields.Numeric('Certifications', digits=price_digits),
         'get_total')
 
     invoiced_quantity = fields.Function(fields.Float('Invoiced Quantity',
