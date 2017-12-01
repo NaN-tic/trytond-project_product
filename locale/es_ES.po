@@ -12,7 +12,7 @@ msgstr "Cantidad facturada"
 
 msgctxt "field:project.work,percent_progress_amount:"
 msgid "Percent Progress Amount"
-msgstr "Progreso (importe)"
+msgstr "Certificaciones"
 
 msgctxt "field:project.work,product_goods:"
 msgid "Product for Goods"
@@ -24,7 +24,7 @@ msgstr "Categoría UdM del producto"
 
 msgctxt "field:project.work,progress_amount:"
 msgid "Progress Amount"
-msgstr "Progreso (importe)"
+msgstr "Certificaciones"
 
 msgctxt "field:project.work,progress_quantity:"
 msgid "Progress Quantity"
@@ -33,6 +33,10 @@ msgstr "Progreso (cantidad)"
 msgctxt "field:project.work,progress_quantity_func:"
 msgid "Progress Quantity"
 msgstr "Progreso (cantidad)"
+
+msgctxt "field:project.work,progress_quantity_percent:"
+msgid "Percent Progress Quantity"
+msgstr ""
 
 msgctxt "field:project.work,quantity:"
 msgid "Quantity"
