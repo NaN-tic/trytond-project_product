@@ -36,7 +36,7 @@ msgstr "Progreso (cantidad)"
 
 msgctxt "field:project.work,progress_quantity_percent:"
 msgid "Percent Progress Quantity"
-msgstr ""
+msgstr "Porcentaje de progreso por cantidad"
 
 msgctxt "field:project.work,quantity:"
 msgid "Quantity"
