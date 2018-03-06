@@ -208,7 +208,8 @@ class Work:
         return self.total_progress_quantity()/self.quantity
 
     def get_invoiced_quantity(self, name):
-        invoiced_quantity = sum(x.quantity for x in self.invoiced_progress)
+        invoiced_quantity = float(sum(Decimal(str(x.quantity)) for x in
+                self.invoiced_progress))
         return invoiced_quantity
 
     @classmethod
