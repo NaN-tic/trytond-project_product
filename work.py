@@ -208,8 +208,10 @@ class Work:
         return self.total_progress_quantity()/self.quantity
 
     def get_invoiced_quantity(self, name):
-        invoiced_quantity = sum(x.quantity for x in self.invoiced_progress)
-        return invoiced_quantity
+        invoiced_quantity = Decimal(str(sum(x.quantity for x in
+                    self.invoiced_progress)))
+        invoiced_quantity.quantize(Decimal(str(10.0 ** - self.uom_digits)))
+        return float(invoiced_quantity)
 
     @classmethod
     def get_total(cls, works, names):
@@ -442,8 +444,7 @@ class Work:
         if self.progress_quantity is None:
             return []
 
-        invoiced_quantity = sum(x.quantity for x in self.invoiced_progress)
-        quantity = self.progress_quantity - invoiced_quantity
+        quantity = self.progress_quantity - self.invoiced_quantity
         if quantity > 0:
             if not self.product_goods:
                 self.raise_user_error('missing_product', (self.rec_name,))
